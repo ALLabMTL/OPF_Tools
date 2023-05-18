@@ -21,10 +21,10 @@ class Case:
             self.gencost = None
             self.N = 0
 
-        elif isinstance(dct, str):
+        if isinstance(dct, str):
             dct = self.getDct(dct)
 
-        elif isinstance(dct, dict):
+        if isinstance(dct, dict):
             self.mva = dct['baseMVA']
             self.bus = dct['bus']
             self.gen = dct['gen']
@@ -153,3 +153,10 @@ class UsefulCase(Case):
             entry = (self.branch[i][0]-1, self.branch[i][1]-1)
             ans.append(entry)
         return ans
+    
+
+def loadCase(filename):
+    with open(filename) as file:
+        dct = json.loads(file.read())
+        file.close()
+    return UsefulCase(dct)
