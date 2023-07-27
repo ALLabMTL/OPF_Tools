@@ -3,7 +3,7 @@ import cvxpy as cp
 
 from OPF_Tools.result import *
 
-def runOPF(case, type=0, verb=False):
+def runOPF(case, type=0, verb=False, solver=None, max_iters=10000):
     '''Find the solution to the OPF specified.
     The solver uses a sparse representation of the problem
 
@@ -27,7 +27,7 @@ def runOPF(case, type=0, verb=False):
     Costs_data = case.cost
     Y = case.adj
     Sij = case.smax
-    v_lim = case.getVlim()
+    v_lim = case.vlim
     lines = case.getLines()
 
     #Voltage matrix
@@ -130,7 +130,10 @@ def runOPF(case, type=0, verb=False):
             Costs += c0+c1*pi_g[i]*baseMVA+c2*cp.square(pi_g[i]*baseMVA)
     
     prob = cp.Problem(cp.Minimize(Costs),constraints)
-    prob.solve(verbose=verb)
+    if solver is not None:
+        prob.solve(verbose=verb, solver=solver, max_iters=max_iters)
+    else:
+        prob.solve(verbose=verb)
     ans = RunResult()
     try:
         ans.setAll(pi_g.value*baseMVA, qi_g*baseMVA, V.value, prob.value)
