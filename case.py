@@ -68,6 +68,7 @@ class UsefulCase(Case):
             self.genData = self.getGenData()
             self.loadData = self.getLoadData()
             self.cost = self.getCost()
+            self.vlim = self.getVlim()
 
 
     def getAdj(self):
