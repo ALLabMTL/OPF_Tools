@@ -1,6 +1,7 @@
 import json
 import numpy as np
 import cvxpy as cp
+import pandas as pd
 
 class Case:
     '''Defines a Case object containing all relevant data from a MatPower case.
@@ -153,6 +154,23 @@ class UsefulCase(Case):
             entry = (self.branch[i][0]-1, self.branch[i][1]-1)
             ans.append(entry)
         return ans
+    
+    def displayData(self):
+        Load_labels=["P_d [MVa]","Q_d [MVar]"]
+        Load_df=pd.DataFrame(self.loadData, columns=Load_labels)
+        display(Load_df)
+
+        Gen_labels = ['P_max [Mva]', 'P_min [Mva]', 'Q_max [MVar]', 'Q_min [MVar]']
+        Gen_df=pd.DataFrame(self.genData, columns=Gen_labels)
+        display(Gen_df)
+
+        Lines_labels = ["from bus", "to bus", "R (p.u.)", "X (p.u.)","S_max (MVA)"]
+        costs_df = pd.DataFrame(np.asarray(self.branch)[:,(0,1,2,3,5)], columns=Lines_labels)
+        display(costs_df)
+
+        Costs_labels=["c2 [$/W^2]", "c1 [$]", "c0 [$]"]
+        costs_df = pd.DataFrame(self.cost, columns=Costs_labels)
+        display(costs_df)
     
 
 def loadCase(filename):
