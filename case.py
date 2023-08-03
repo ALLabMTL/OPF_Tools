@@ -169,7 +169,7 @@ class UsefulCase(Case):
         costs_df = pd.DataFrame(np.asarray(self.branch)[:,(0,1,2,3,5)], columns=Lines_labels)
         display(costs_df)
 
-        Costs_labels=["c2 [$/W^2]", "c1 [$]", "c0 [$]"]
+        Costs_labels=["c2 [$/MW^2]", "c1 [$/MW]", "c0 [$]"]
         costs_df = pd.DataFrame(self.cost, columns=Costs_labels)
         display(costs_df)
     
