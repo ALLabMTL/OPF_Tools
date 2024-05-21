@@ -74,8 +74,15 @@ If a chordal relaxation has been used, the result stores :
 - The compilaiton time in ```result.compilation_time```
 - Information about the clique decomposition :
 ```python
-result.number_of_cliques
-result.fill_in
-result.linking_constraints
-result.mean_size_of_cliques
+case = loadCase('cases/case9.json')
+result = runOPF(case,'Chordal_AMD', verb = False, solver = 'MOSEK')
+
+print(f'Optimal result is : {result.loss:.3f}')
+print(f'Solve time is : {result.solve_time:.2f} seconds')
+print(f'Compilation time is : {result.compilation_time:.2f} seconds')
+
+print(f'Number of cliques : {result.number_of_cliques}')
+print(f'Fill in : {result.fill_in}')
+print(f'Linking constraints : {result.linking_constraints}')
+print(f'Mean size of cliques : {result.mean_size_of_cliques}')
 ```
