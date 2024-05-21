@@ -40,9 +40,8 @@ class RunResult:
         '''Set optimal losses'''
         self.loss = loss
 
-    def setAll_chordal(self, p, q, W, loss, network, chordal_extension, ordering, solve_time, compilation_time, relaxation, number_of_cliques, fill_in, linking_constraints, mean_size_of_cliques):
+    def setAll_chordal(self, p, q, loss, network, chordal_extension, ordering, solve_time, compilation_time, relaxation, number_of_cliques, fill_in, linking_constraints, mean_size_of_cliques):
         '''Set all parameters including loss'''
-        self.W = W
         self.p = p
         self.q = q
         self.loss = loss

@@ -28,8 +28,9 @@ def runOPF(case, relaxation_type='SDR', verb=False, solver=None):
 
     try:
         relaxation = Relaxation[relaxation_type]
-    except ValueError:
+    except KeyError:
         print(f"'{relaxation_type}' is not a valid Relaxation")
+        return None
     linking_constraints = 0
 
     # load data from case
@@ -209,5 +210,5 @@ def runOPF(case, relaxation_type='SDR', verb=False, solver=None):
     if relaxation in Relaxation.Non_Chordal_Relaxations:
         ans.setAll(pi_g.value*baseMVA, qi_g*baseMVA, W.value, prob.value, Network, prob._solve_time, prob._compilation_time, relaxation)
     if relaxation in Relaxation.Chordal_Relaxations:
-        ans.setAll_chordal(pi_g.value*baseMVA, qi_g*baseMVA, W.value, prob.value, Network, chordal_extension, ordering, prob._solve_time, prob._compilation_time, relaxation, N_cliques, fill_in, linking_constraints, mean_size_of_cliques)
+        ans.setAll_chordal(pi_g.value*baseMVA, qi_g*baseMVA, prob.value, Network, chordal_extension, ordering, prob._solve_time, prob._compilation_time, relaxation, N_cliques, fill_in, linking_constraints, mean_size_of_cliques)
     return ans

@@ -20,21 +20,41 @@ class Relaxation(Flag):
     Chordal_Relaxations = Chordal_MFI | Chordal_AMD | Chordal_MD | Chordal_MCS_M
 
 def AMD_Cholesky(Network):
-    p = amd.order
+    """Chordal extension using Approximate Minimum Degree ordering and Cholesky factorization.
+    
+    Args:
+        Network (nx.Graph): Original graph.
+    
+    Returns:
+        tuple: Extended chordal graph, elimination ordering and cliques.
+    """
+    p = amd.order                                                 # Approximate Minimum Degree ordering
+    Network.add_edges_from([(i,i) for i in Network.nodes])        # Add self loops for symbolic factorization
     Sparsity_pattern = nx.to_scipy_sparse_array(Network)
-    Sparsity_pattern.setdiag(1)
     coo = Sparsity_pattern.tocoo()
+    
+    # Symbolic Cholesky factorization
     SP_matrix = cp.symbolic(spmatrix(coo.data.tolist(), coo.row.tolist(), coo.col.tolist(), size=Sparsity_pattern.shape),p)
-    SP_filled = SP_matrix.sparsity_pattern(reordered=False)
+    SP_filled = SP_matrix.sparsity_pattern(reordered=False)         # Sparsity pattern with filled in values
     SP_csr = csr_matrix((list(SP_filled.V), (list(SP_filled.I), list(SP_filled.J))), shape=SP_filled.size)
-    SP_csr.setdiag(0)
-    SP_csr.eliminate_zeros()
+    chordal_extension = nx.from_scipy_sparse_array(SP_csr)
+    chordal_extension.remove_edges_from(nx.selfloop_edges(chordal_extension))
     cliques = SP_matrix.cliques(reordered = False)
     cliques = [tuple(sorted(i)) for i in cliques]
-    return nx.from_scipy_sparse_array(SP_csr), SP_matrix.p, cliques
+    return chordal_extension, SP_matrix.p, cliques
 
 
 def elimination_game(Network, heuristic = 'MD'):
+    """Elimination game algorithm to find a chordal extension of a graph.
+
+    Args:
+        Network (nx.Graph): Original graph.
+        heuristic (str, optional): Heuristic used to select the node to eliminate at each step.
+        'MD' for Minimum Degree, 'MFI' for Minimum Fill-In. Defaults to 'MD'.
+
+    Returns:
+        _type_: Extended chordal graph and elimination ordering.
+    """
     n = Network.number_of_nodes()
     Gk = Network.copy()
     Gplus = Network.copy()
@@ -97,6 +117,15 @@ def missing_edges_for_clique(graph, node):
     return missing_edges
 
 def is_subclique(G,nodelist):
+    """Tests if the subgraph induced by nodelist is a clique.
+
+    Args:
+        G (nx.Graph): Input graph.
+        nodelist (): set of nodes.
+
+    Returns:
+        boolean: True if the subgraph induced by nodelist is a clique.
+    """
     H = G.subgraph(nodelist)
     n = len(nodelist)
     return H.size() == n*(n-1)/2
