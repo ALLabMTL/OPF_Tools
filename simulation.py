@@ -1,8 +1,8 @@
 import numpy as np
 import cvxpy as cp
 import networkx as nx
-from result import RunResult
-from chordalification import Relaxation, getChordalExtension
+from OPF_Tools.result import RunResult
+from OPF_Tools.chordalification import Relaxation, getChordalExtension
 
 
 def runOPF(case, relaxation_type='SDR', verb=False, solver=None):
