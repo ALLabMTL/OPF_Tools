@@ -26,11 +26,17 @@ print('Optimal result is : {}'.format(result.loss))
 case = Case('cases/case9.json')
 
 # Run using TCR relaxation and verbose option
-result = runOPF(case, 'TCR', True)
+result = runOPF(case,'TCR',True)
+
+# relaxations = ['SDR','Chordal_MFI','Chordal_AMD','Chordal_MD','Chordal_MCS_M','SOCR','TCR','STCR']
 
 print('Optimal generation is: ')
 print(result.p)
 ```
+
+## Chordal Relaxation
+
+
 
 # Case
 A case lists all required information for a standard MatPower test case. It can be loaded directly from a json file or entered manually. All json files in the "cases" folder are compatible with the Case format. The fields in a Case object share the names of the standard MatPower mpc object.
@@ -54,3 +60,22 @@ The RunResult object stores the run result of an opf instance.
 Four elements are saved in a result. The (complex) square voltage matrix "W", the active power generation "p", the reactive power generation "q" and the optimal value loss.
 
 It is possible to set these parametrs using either a numpy array or a cvxpy variable.
+
+## Chordal Relaxation
+
+If a chordal relaxation has been used, the result stores : 
+- the active power generation in ```result.p```
+- the reactive power generation in ```result.q```
+- the objective value in ```result.loss```
+- A networkx graph representation of the original network in ```result.network```
+- The chordal extension in ```result.chordal_extension```
+- The ordering of the nodes used to compute the chordal extension in ```result.ordering```
+- The solve time in ```result.solve_time```
+- The compilaiton time in ```result.compilation_time```
+- Information about the clique decomposition :
+```python
+result.number_of_cliques
+result.fill_in
+result.linking_constraints
+result.mean_size_of_cliques
+```
