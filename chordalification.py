@@ -28,14 +28,15 @@ def AMD_Cholesky(Network):
     Returns:
         tuple: Extended chordal graph, elimination ordering and cliques.
     """
-    p = amd.order                                                 # Approximate Minimum Degree ordering
-    Network.add_edges_from([(i,i) for i in Network.nodes])        # Add self loops for symbolic factorization
-    Sparsity_pattern = nx.to_scipy_sparse_array(Network)
+    p = amd.order                                                           # Approximate Minimum Degree ordering
+    Network_copy = Network.copy()
+    Network_copy.add_edges_from([(i,i) for i in Network_copy.nodes])        # Add self loops for symbolic factorization
+    Sparsity_pattern = nx.to_scipy_sparse_array(Network_copy)
     coo = Sparsity_pattern.tocoo()
     
     # Symbolic Cholesky factorization
     SP_matrix = cp.symbolic(spmatrix(coo.data.tolist(), coo.row.tolist(), coo.col.tolist(), size=Sparsity_pattern.shape),p)
-    SP_filled = SP_matrix.sparsity_pattern(reordered=False)         # Sparsity pattern with filled in values
+    SP_filled = SP_matrix.sparsity_pattern(reordered=False)                 # Sparsity pattern with filled in values
     SP_csr = csr_matrix((list(SP_filled.V), (list(SP_filled.I), list(SP_filled.J))), shape=SP_filled.size)
     chordal_extension = nx.from_scipy_sparse_array(SP_csr)
     chordal_extension.remove_edges_from(nx.selfloop_edges(chordal_extension))

@@ -74,12 +74,18 @@ If a chordal relaxation has been used, the result stores :
 - The compilaiton time in ```result.compilation_time```
 - Information about the clique decomposition :
 ```python
-case = loadCase('cases/case9.json')
+from OPF_Tools import *
+import networkx as nx
+
+case = loadCase('OPF_Tools/cases/case30.json')
 result = runOPF(case,'Chordal_AMD', verb = False, solver = 'MOSEK')
 
 print(f'Optimal result is : {result.loss:.3f}')
 print(f'Solve time is : {result.solve_time:.2f} seconds')
 print(f'Compilation time is : {result.compilation_time:.2f} seconds')
+
+nx.draw(result.network, with_labels=True)
+nx.draw(result.chordal_extension, with_labels=True)
 
 print(f'Number of cliques : {result.number_of_cliques}')
 print(f'Fill in : {result.fill_in}')
