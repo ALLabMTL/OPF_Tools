@@ -26,7 +26,7 @@ print('Optimal result is : {}'.format(result.loss))
 case = Case('cases/case9.json')
 
 # Run using TCR relaxation and verbose option
-result = runOPF(case, 2, True)
+result = runOPF(case, 'TCR', True)
 
 print('Optimal generation is: ')
 print(result.p)
