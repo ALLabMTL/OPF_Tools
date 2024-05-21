@@ -2,9 +2,10 @@ import numpy as np
 import cvxpy as cp
 import networkx as nx
 from result import RunResult
-from chordalification import getChordalExtension, Relaxation, getRelaxation
+from chordalification import Relaxation, getChordalExtension
 
-def runOPF(case, relaxation='SDR', verb=False, solver=None, max_iters=10000):
+
+def runOPF(case, relaxation_type='SDR', verb=False, solver=None):
     '''Find the solution to the OPF specified.
     The solver uses a sparse representation of the problem
 
@@ -25,7 +26,10 @@ def runOPF(case, relaxation='SDR', verb=False, solver=None, max_iters=10000):
         -> None if optimizer does not converge 
     '''
 
-    relaxation = getRelaxation(relaxation)
+    try:
+        relaxation = Relaxation[relaxation_type]
+    except ValueError:
+        print(f"'{relaxation_type}' is not a valid Relaxation")
     linking_constraints = 0
 
     # load data from case
@@ -198,15 +202,12 @@ def runOPF(case, relaxation='SDR', verb=False, solver=None, max_iters=10000):
     
     prob = cp.Problem(cp.Minimize(Costs),constraints)
     if solver is not None:
-        prob.solve(verbose=verb, solver=solver, max_iters=max_iters)
+        prob.solve(verbose=verb, solver=solver)
     else:
         prob.solve(verbose=verb)
     ans = RunResult()
-    try:
-        if relaxation in Relaxation.Non_Chordal_Relaxations:
-            ans.setAll(pi_g.value*baseMVA, qi_g*baseMVA, W.value, prob.value, Network)
-        if relaxation in Relaxation.Chordal_Relaxations:
-            ans.setAll_chordal(pi_g.value*baseMVA, qi_g*baseMVA, W.value, prob.value, Network, chordal_extension, ordering, prob._solve_time, prob._compilation_time, relaxation, N_cliques, fill_in, linking_constraints, mean_size_of_cliques)
-    except TypeError:
-        return None
+    if relaxation in Relaxation.Non_Chordal_Relaxations:
+        ans.setAll(pi_g.value*baseMVA, qi_g*baseMVA, W.value, prob.value, Network, prob._solve_time, prob._compilation_time, relaxation)
+    if relaxation in Relaxation.Chordal_Relaxations:
+        ans.setAll_chordal(pi_g.value*baseMVA, qi_g*baseMVA, W.value, prob.value, Network, chordal_extension, ordering, prob._solve_time, prob._compilation_time, relaxation, N_cliques, fill_in, linking_constraints, mean_size_of_cliques)
     return ans

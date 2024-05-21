@@ -4,40 +4,20 @@ from cvxopt import spmatrix, amd, matrix
 import chompack as cp
 from scipy.sparse import csr_matrix
 from scipy.sparse.linalg import splu
-from enum import Flag
+from enum import Flag, auto
 
 class Relaxation(Flag):
-    SDR = 1
-    Chordal_MFI = 2
-    Chordal_AMD = 3
-    Chordal_MD = 4
-    Chordal_MCS_M = 5
-    SOCR = 6
-    TCR = 7
-    STCR = 8
+    SDR = auto()
+    SOCR = auto()
+    TCR = auto()
+    STCR = auto()
+    Chordal_MFI = auto()
+    Chordal_AMD = auto()
+    Chordal_MD = auto()
+    Chordal_MCS_M = auto()
+    
     Non_Chordal_Relaxations = SDR | SOCR | TCR | STCR
     Chordal_Relaxations = Chordal_MFI | Chordal_AMD | Chordal_MD | Chordal_MCS_M
-
-def getRelaxation(name):
-    '''Get the relaxation type from the name'''
-    if name == 'SDR':
-        return Relaxation.SDR
-    elif name == 'Chordal_MFI':
-        return Relaxation.Chordal_MFI
-    elif name == 'Chordal_AMD':
-        return Relaxation.Chordal_AMD
-    elif name == 'Chordal_MD':
-        return Relaxation.Chordal_MD
-    elif name == 'Chordal_MCS_M':
-        return Relaxation.Chordal_MCS_M
-    elif name == 'SOCR':
-        return Relaxation.SOCR
-    elif name == 'TCR':
-        return Relaxation.TCR
-    elif name == 'STCR':
-        return Relaxation.STCR
-    else:
-        return None
 
 def AMD_Cholesky(Network):
     p = amd.order
