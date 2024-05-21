@@ -97,7 +97,7 @@ nx.draw(result.network, with_labels=True)
 nx.draw(result.chordal_extension, with_labels=True)
 ```
 
-```shell
+```console
 Results for case30.json with Chordal_AMD relaxation:
 
 
