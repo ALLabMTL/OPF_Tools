@@ -80,15 +80,34 @@ import networkx as nx
 case = loadCase('OPF_Tools/cases/case30.json')
 result = runOPF(case,'Chordal_AMD', verb = False, solver = 'MOSEK')
 
+print('Results for case30.json with Chordal_AMD relaxation:')
+print('\n')
+
 print(f'Optimal result is : {result.loss:.3f}')
 print(f'Solve time is : {result.solve_time:.2f} seconds')
 print(f'Compilation time is : {result.compilation_time:.2f} seconds')
-
-nx.draw(result.network, with_labels=True)
-nx.draw(result.chordal_extension, with_labels=True)
+print('\n')
 
 print(f'Number of cliques : {result.number_of_cliques}')
 print(f'Fill in : {result.fill_in}')
 print(f'Linking constraints : {result.linking_constraints}')
 print(f'Mean size of cliques : {result.mean_size_of_cliques}')
+
+nx.draw(result.network, with_labels=True)
+nx.draw(result.chordal_extension, with_labels=True)
+```
+
+```console
+Results for case30.json with Chordal_AMD relaxation:
+
+
+Optimal result is : 580.666
+Solve time is : 0.09 seconds
+Compilation time is : 1.83 seconds
+
+
+Number of cliques : 26
+Fill in : 14
+Linking constraints : 93
+Mean size of cliques : 2.96154
 ```
