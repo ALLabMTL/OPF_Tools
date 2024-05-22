@@ -71,22 +71,37 @@ def elimination_game(Network, heuristic = 'MD'):
             Gplus.add_edges_from(missing_edges)
         return Gplus, Ordering
     if heuristic == 'MFI':
-        for k in range(n):
-            number_of_missing_edges_per_node = dict()
-            for node in Gk:
+        number_of_missing_edges_per_node = dict()
+        missing_edges_per_node = dict()
+        for node in Gk:
                 missing_edges = missing_edges_for_clique(Gk, node)
+                missing_edges_per_node[node] = missing_edges
                 if missing_edges is None:
                     number_of_missing_edges_per_node[node] = 0
                 else:
                     number_of_missing_edges_per_node[node] = len(missing_edges)
-            vertex_min_missing_edges = min(number_of_missing_edges_per_node, key=number_of_missing_edges_per_node.get)
+        for k in range(n):
+            vertex_min_missing_edges = min(number_of_missing_edges_per_node, key=number_of_missing_edges_per_node.get)      
             Ordering[vertex_min_missing_edges] = k
-            missing_edges = missing_edges_for_clique(Gk, vertex_min_missing_edges)
-            Gk.remove_node(vertex_min_missing_edges)
+            missing_edges = missing_edges_per_node[vertex_min_missing_edges]
             if missing_edges is None:
-                continue
-            Gk.add_edges_from(missing_edges)
-            Gplus.add_edges_from(missing_edges)
+                nodes_affected = set(Gk.neighbors(vertex_min_missing_edges))
+            else:
+                nodes_affected = nx.single_source_shortest_path_length(Gk, vertex_min_missing_edges, cutoff=2)
+                nodes_affected.pop(vertex_min_missing_edges)
+                nodes_affected = set(nodes_affected.keys())
+                Gk.add_edges_from(missing_edges)
+                Gplus.add_edges_from(missing_edges)
+            Gk.remove_node(vertex_min_missing_edges)
+            number_of_missing_edges_per_node.pop(vertex_min_missing_edges)
+            missing_edges_per_node.pop(vertex_min_missing_edges)
+            for node in nodes_affected:
+                missing_edges = missing_edges_for_clique(Gk, node)
+                missing_edges_per_node[node] = missing_edges
+                if missing_edges is None:
+                    number_of_missing_edges_per_node[node] = 0
+                else:
+                    number_of_missing_edges_per_node[node] = len(missing_edges)
         return Gplus, Ordering
 
 def missing_edges_for_clique(graph, node):
