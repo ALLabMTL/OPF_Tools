@@ -202,13 +202,22 @@ def runOPF(case, relaxation_type='SDR', verb=False, solver=None):
             Costs += c0+c1*pi_g[i]*baseMVA+c2*cp.square(pi_g[i]*baseMVA)
     
     prob = cp.Problem(cp.Minimize(Costs),constraints)
-    if solver is not None:
-        prob.solve(verbose=verb, solver=solver)
-    else:
-        prob.solve(verbose=verb)
+    try:
+        if solver is not None:
+            prob.solve(verbose=verb, solver=solver)
+        else:
+            prob.solve(verbose=verb)
+        loss = prob.value
+    except cp.SolverError:
+        loss = np.NaN
+    status = prob.status
     ans = RunResult()
+    if status == 'optimal':
+        ans.set_p_q(pi_g*baseMVA, qi_g*baseMVA)
+        if relaxation in Relaxation.Non_Chordal_Relaxations:
+            ans.set_W(W)
     if relaxation in Relaxation.Non_Chordal_Relaxations:
-        ans.setAll(pi_g.value*baseMVA, qi_g*baseMVA, W.value, prob.value, Network, prob._solve_time, prob._compilation_time, relaxation)
+        ans.setAll(status, loss, Network, prob._solve_time, prob._compilation_time, relaxation)
     if relaxation in Relaxation.Chordal_Relaxations:
-        ans.setAll_chordal(pi_g.value*baseMVA, qi_g*baseMVA, prob.value, Network, chordal_extension, ordering, prob._solve_time, prob._compilation_time, relaxation, N_cliques, fill_in, linking_constraints, mean_size_of_cliques)
+        ans.setAll_chordal(status, loss, Network, chordal_extension, ordering, prob._solve_time, prob._compilation_time, relaxation, N_cliques, fill_in, linking_constraints, mean_size_of_cliques)
     return ans
