@@ -1,9 +1,4 @@
 import networkx as nx
-import matplotlib.pyplot as plt
-from cvxopt import spmatrix, amd, matrix
-import chompack as cp
-from scipy.sparse import csr_matrix
-from scipy.sparse.linalg import splu
 from enum import Flag, auto
 
 class Relaxation(Flag):
@@ -28,6 +23,9 @@ def AMD_Cholesky(Network):
     Returns:
         tuple: Extended chordal graph, elimination ordering and cliques.
     """
+    from cvxopt import spmatrix, amd, matrix
+    import chompack as cp
+    from scipy.sparse import csr_matrix
     p = amd.order                                                           # Approximate Minimum Degree ordering
     Network_copy = Network.copy()
     Network_copy.add_edges_from([(i,i) for i in Network_copy.nodes])        # Add self loops for symbolic factorization
