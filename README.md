@@ -34,10 +34,6 @@ print('Optimal generation is: ')
 print(result.p)
 ```
 
-## Chordal Relaxation
-
-
-
 # Case
 A case lists all required information for a standard MatPower test case. It can be loaded directly from a json file or entered manually. All json files in the "cases" folder are compatible with the Case format. The fields in a Case object share the names of the standard MatPower mpc object.
 
