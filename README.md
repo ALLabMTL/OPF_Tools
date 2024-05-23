@@ -26,7 +26,9 @@ print('Optimal result is : {}'.format(result.loss))
 case = Case('cases/case9.json')
 
 # Run using TCR relaxation and verbose option
-result = runOPF(case, 2, True)
+result = runOPF(case,'TCR',True)
+
+# relaxations = ['SDR','Chordal_MFI','Chordal_AMD','Chordal_MD','Chordal_MCS_M','SOCR','TCR','STCR']
 
 print('Optimal generation is: ')
 print(result.p)
@@ -54,3 +56,54 @@ The RunResult object stores the run result of an opf instance.
 Four elements are saved in a result. The (complex) square voltage matrix "W", the active power generation "p", the reactive power generation "q" and the optimal value loss.
 
 It is possible to set these parametrs using either a numpy array or a cvxpy variable.
+
+## Chordal Relaxation
+
+If a chordal relaxation has been used, the result stores : 
+- the active power generation in ```result.p```
+- the reactive power generation in ```result.q```
+- the objective value in ```result.loss```
+- A networkx graph representation of the original network in ```result.network```
+- The chordal extension in ```result.chordal_extension```
+- The ordering of the nodes used to compute the chordal extension in ```result.ordering```
+- The solve time in ```result.solve_time```
+- The compilaiton time in ```result.compilation_time```
+- Information about the clique decomposition :
+```python
+from OPF_Tools import *
+import networkx as nx
+
+case = loadCase('OPF_Tools/cases/case30.json')
+result = runOPF(case,'Chordal_AMD', verb = False, solver = 'MOSEK')
+
+print('Results for case30.json with Chordal_AMD relaxation:')
+print('\n')
+
+print(f'Optimal result is : {result.loss:.3f}')
+print(f'Solve time is : {result.solve_time:.2f} seconds')
+print(f'Compilation time is : {result.compilation_time:.2f} seconds')
+print('\n')
+
+print(f'Number of cliques : {result.number_of_cliques}')
+print(f'Fill in : {result.fill_in}')
+print(f'Linking constraints : {result.linking_constraints}')
+print(f'Mean size of cliques : {result.mean_size_of_cliques}')
+
+nx.draw(result.network, with_labels=True)
+nx.draw(result.chordal_extension, with_labels=True)
+```
+
+```console
+Results for case30.json with Chordal_AMD relaxation:
+
+
+Optimal result is : 580.666
+Solve time is : 0.09 seconds
+Compilation time is : 1.83 seconds
+
+
+Number of cliques : 26
+Fill in : 14
+Linking constraints : 93
+Mean size of cliques : 2.96154
+```

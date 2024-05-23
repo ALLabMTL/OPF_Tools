@@ -2,6 +2,7 @@ import json
 import numpy as np
 import cvxpy as cp
 import pandas as pd
+from IPython.display import display
 
 class Case:
     '''Defines a Case object containing all relevant data from a MatPower case.
