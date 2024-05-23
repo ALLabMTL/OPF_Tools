@@ -9,15 +9,15 @@ def runOPF(case, relaxation_type='SDR', verb=False, solver=None):
     '''Find the solution to the OPF specified.
     The solver uses a sparse representation of the problem
 
-    Relaxation defines the type of relaxation used. These are 
-    'SDR' (default)
-    'Chordal_MFI'
-    'Chordal_AMD'
-    'Chordal_MD'
-    'Chordal_MCS_M'
-    'SOCR'
-    'TCR'
-    'STCR'
+    Relaxation defines the type of relaxation used. These are:
+    'SDR' (default)    -> Semidefinite relaxation
+    'Chordal_MFI'      -> Chordal relaxation using the Minimum Fill-In ordering
+    'Chordal_AMD'      -> Chordal relaxation using the Approximate Minimum Degree ordering
+    'Chordal_MD'       -> Chordal relaxation using the Minimum Degree ordering
+    'Chordal_MCS_M'    -> Chordal relaxation using the Maximum Cardinality Search ordering
+    'SOCR'             -> Second Order Cone relaxation
+    'TCR'              -> Trace-Constrained relaxation
+    'STCR'             -> Strong Trace-Constrained relaxation
 
     verb invokes the verbose option in cvxpy
 
