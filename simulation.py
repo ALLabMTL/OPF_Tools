@@ -23,7 +23,7 @@ def runOPF(case, relaxation_type='SDR', verb=False, solver=None):
 
     Returns:
         RunResult instance with the optimal values
-        -> None if optimizer does not converge 
+        -> RunResult.status is None if the solver does not converge
     '''
 
     try:
