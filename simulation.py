@@ -123,7 +123,8 @@ def runOPF(case, relaxation_type='SDR', verb=False, solver=None):
             clique = cliques[node_to_cliques[i][0]]
             pos = clique.index(i)
             constraints += [v_lim[i,1]**2 <= cp.real(W_K[clique][pos,pos]), cp.real(W_K[clique][pos,pos]) <= v_lim[i,0]**2]
-            
+
+        # Constraints on active and reactive generation (min-max)
         if Gen_data[i, 0] is not None:
             constraints += [pi_g[i] <= Gen_data[i, 0]]
         if Gen_data[i, 1] is not None:
@@ -132,11 +133,6 @@ def runOPF(case, relaxation_type='SDR', verb=False, solver=None):
             constraints += [qi_g[i] <= Gen_data[i, 2]]
         if Gen_data[i, 3] is not None:
             constraints += [qi_g[i] >= Gen_data[i, 3]]
-    # Constraints on active and reactive generation (min-max)
-    constraints += [pi_g[i] <= Gen_data[i, 0] for i in range(n) if Gen_data[i, 0] is not None]
-    constraints += [pi_g[i] >= Gen_data[i, 1] for i in range(n) if Gen_data[i, 1] is not None]
-    constraints += [qi_g[i] <= Gen_data[i, 2] for i in range(n) if Gen_data[i, 2] is not None]
-    constraints += [qi_g[i] >= Gen_data[i, 3] for i in range(n) if Gen_data[i, 3] is not None]
 
     # Power flow equations (sparse representation)
     print('Setting up the power flow equations')
