@@ -16,8 +16,8 @@ def runOPF(case, relaxation_type='SDR', verb=False, solver=None):
     'Chordal_MD'       -> Chordal relaxation using the Minimum Degree ordering
     'Chordal_MCS_M'    -> Chordal relaxation using the Maximum Cardinality Search ordering
     'SOCR'             -> Second Order Cone relaxation
-    'TCR'              -> Trace-Constrained relaxation
-    'STCR'             -> Strong Trace-Constrained relaxation
+    'TCR'              -> Tight and Cheap relaxation
+    'STCR'             -> Strong Tight and Cheap relaxation
 
     verb invokes the verbose option in cvxpy
 
@@ -123,7 +123,15 @@ def runOPF(case, relaxation_type='SDR', verb=False, solver=None):
             clique = cliques[node_to_cliques[i][0]]
             pos = clique.index(i)
             constraints += [v_lim[i,1]**2 <= cp.real(W_K[clique][pos,pos]), cp.real(W_K[clique][pos,pos]) <= v_lim[i,0]**2]
-    print('Setting up the generation constraints')
+            
+        if Gen_data[i, 0] is not None:
+            constraints += [pi_g[i] <= Gen_data[i, 0]]
+        if Gen_data[i, 1] is not None:
+            constraints += [pi_g[i] >= Gen_data[i, 1]]
+        if Gen_data[i, 2] is not None:
+            constraints += [qi_g[i] <= Gen_data[i, 2]]
+        if Gen_data[i, 3] is not None:
+            constraints += [qi_g[i] >= Gen_data[i, 3]]
     # Constraints on active and reactive generation (min-max)
     constraints += [pi_g[i] <= Gen_data[i, 0] for i in range(n) if Gen_data[i, 0] is not None]
     constraints += [pi_g[i] >= Gen_data[i, 1] for i in range(n) if Gen_data[i, 1] is not None]
@@ -229,7 +237,12 @@ def runOPF(case, relaxation_type='SDR', verb=False, solver=None):
     print('Solving the problem')
     try:
         if solver is not None:
-            prob.solve(verbose=verb, solver=solver)
+            if solver == 'MOSEK':
+                import os
+                # prob.solve(warm_start = True, solver='MOSEK',mosek_params = {"MSK_IPAR_NUM_THREADS":os.cpu_count()},verbose=verb,ignore_dpp = True)
+                prob.solve(verbose=verb, solver=solver)
+            else:
+                prob.solve(verbose=verb, solver=solver)
         else:
             prob.solve(verbose=verb)
         loss = prob.value
