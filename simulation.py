@@ -48,6 +48,8 @@ def runOPF(case, relaxation_type='SDR', verb=False, solver=None):
     Network = nx.Graph()
     Network.add_nodes_from(range(n))
     Network.add_edges_from(lines)
+    
+    print('Setting up the variables')
 
     #Voltage matrix
     if relaxation in Relaxation.Non_Chordal_Relaxations:
@@ -60,6 +62,28 @@ def runOPF(case, relaxation_type='SDR', verb=False, solver=None):
         mean_size_of_cliques = np.mean([len(clique) for clique in cliques])
         
         W_K = {clique: cp.Variable((len(clique), len(clique)), hermitian=True) for clique in cliques}
+        
+        # Creating dictionaries that map the nodes and edges to their respective cliques
+        
+        clique_sets = [set(clique) for clique in cliques]
+        
+        node_to_cliques = [[] for _ in range(n)]
+        for idx, clique in enumerate(clique_sets):
+            for node in clique:
+                node_to_cliques[node].append(idx)
+
+        edge_to_clique = {}
+        for edge in lines:
+            edge_set = set(edge)
+            found = False
+            for node in edge:
+                for clique_idx in node_to_cliques[node]:
+                    if edge_set.issubset(clique_sets[clique_idx]):
+                        edge_to_clique[edge] = clique_idx
+                        found = True
+                        break
+                if found:
+                    break
 
     # power transfer variables
     pij = cp.Variable((len(lines)))
@@ -73,7 +97,7 @@ def runOPF(case, relaxation_type='SDR', verb=False, solver=None):
 
     # Define constraints
     constraints=[] 
-
+    print('Setting up voltage limits and power balance constraints')
     # Calculate the sum of all inbound power flows to each bus
     for i in range(n) :  
         psum = 0
@@ -91,45 +115,44 @@ def runOPF(case, relaxation_type='SDR', verb=False, solver=None):
         constraints += [psum == pi_g[i]-Load_data[i,0]]
         # Sum qij = qi 
         constraints += [qsum == qi_g[i]-Load_data[i,1]]
-
-        #Constraints on active and reactive generation (min-max)
-        constraints+=[pi_g[i] >= Gen_data[i,1], pi_g[i] <= Gen_data[i,0]]
-        constraints+=[qi_g[i] >= Gen_data[i,3], qi_g[i] <= Gen_data[i,2]]
-
+        
         # Voltage limits
         if relaxation in Relaxation.Non_Chordal_Relaxations:
             constraints+=[cp.real(W[i,i])>= (v_lim[i,1])**2, cp.real(W[i,i]) <= (v_lim[i,0])**2]
-        
         if relaxation in Relaxation.Chordal_Relaxations:
-            for clique in cliques:
-                for i in clique:
-                    pos = clique.index(i)
-                    constraints += [v_lim[i,1]**2 <= cp.real(W_K[clique][pos,pos]), cp.real(W_K[clique][pos,pos]) <= v_lim[i,0]**2]
-                    break
+            clique = cliques[node_to_cliques[i][0]]
+            pos = clique.index(i)
+            constraints += [v_lim[i,1]**2 <= cp.real(W_K[clique][pos,pos]), cp.real(W_K[clique][pos,pos]) <= v_lim[i,0]**2]
+    print('Setting up the generation constraints')
+    # Constraints on active and reactive generation (min-max)
+    constraints += [pi_g[i] <= Gen_data[i, 0] for i in range(n) if Gen_data[i, 0] is not None]
+    constraints += [pi_g[i] >= Gen_data[i, 1] for i in range(n) if Gen_data[i, 1] is not None]
+    constraints += [qi_g[i] <= Gen_data[i, 2] for i in range(n) if Gen_data[i, 2] is not None]
+    constraints += [qi_g[i] >= Gen_data[i, 3] for i in range(n) if Gen_data[i, 3] is not None]
 
     # Power flow equations (sparse representation)
+    print('Setting up the power flow equations')
     for line in range(len(lines)):
         i, j = lines[line]
-            
+        
         #Powerflow
         if relaxation in Relaxation.Non_Chordal_Relaxations:
             constraints+=[pij[line] + 1j*qij[line]==(W[i,i]-W[i,j])*np.conjugate(Y[i,j])] 
             constraints+=[pji[line] + 1j*qji[line]==(W[j,j]-W[j,i])*np.conjugate(Y[j,i])] 
         
         if relaxation in Relaxation.Chordal_Relaxations:
-            for clique in cliques:
-                if i in clique and j in clique:
-                    pos_i = clique.index(i)
-                    pos_j = clique.index(j)
-                    constraints+=[pij[line] + 1j*qij[line]==(W_K[clique][pos_i,pos_i]-W_K[clique][pos_i,pos_j])*np.conjugate(Y[i,j])]
-                    constraints+=[pji[line] + 1j*qji[line]==(W_K[clique][pos_j,pos_j]-W_K[clique][pos_j,pos_i])*np.conjugate(Y[j,i])]
-                    break
+            clique = cliques[edge_to_clique[(i,j)]]
+            pos_i = clique.index(i)
+            pos_j = clique.index(j)
+            constraints+=[pij[line] + 1j*qij[line]==(W_K[clique][pos_i,pos_i]-W_K[clique][pos_i,pos_j])*np.conjugate(Y[i,j])]
+            constraints+=[pji[line] + 1j*qji[line]==(W_K[clique][pos_j,pos_j]-W_K[clique][pos_j,pos_i])*np.conjugate(Y[j,i])]  
             
         if not Sij[i,j] == 0:
         #Apparent power capacity S_bar
             constraints+=[cp.square(pij[line])+cp.square(qij[line])<=cp.square(Sij[i,j])]
             constraints+=[cp.square(pji[line])+cp.square(qji[line])<=cp.square(Sij[j,i])]
-               
+    
+    print('Setting up the relaxation')
     # SDR problem
     if relaxation == Relaxation.SDR:
         constraints += [W >> 0]
@@ -201,7 +224,9 @@ def runOPF(case, relaxation_type='SDR', verb=False, solver=None):
         if c1 > 0.0: # Bus has a generator installed
             Costs += c0+c1*pi_g[i]*baseMVA+c2*cp.square(pi_g[i]*baseMVA)
     
+    print('Setting up the problem')
     prob = cp.Problem(cp.Minimize(Costs),constraints)
+    print('Solving the problem')
     try:
         if solver is not None:
             prob.solve(verbose=verb, solver=solver)
