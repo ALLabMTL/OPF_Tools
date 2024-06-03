@@ -190,7 +190,9 @@ class UsefulCase(Case):
         Costs_labels=["c2 [$/MW^2]", "c1 [$/MW]", "c0 [$]"]
         costs_df = pd.DataFrame(self.cost, columns=Costs_labels)
         display(costs_df)
-    
+        
+    def get_renumbering(self):
+        return self.renumber
 
 def loadCase(filename):
     with open(filename) as file:
