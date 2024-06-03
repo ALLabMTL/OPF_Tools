@@ -22,6 +22,7 @@ class Case:
             self.branch = None
             self.gencost = None
             self.N = 0
+            self.renumber = None
 
         if isinstance(dct, str):
             dct = self.getDct(dct)
@@ -37,6 +38,22 @@ class Case:
                 self.gen = [self.gen]
             if not isinstance(self.gencost[0], list):
                 self.gencost = [self.gencost]
+        
+        # Renumbering the buses to be consecutive
+        bus_numbers = np.asarray(self.bus)[:,0]
+        if bus_numbers[-1] != self.N:
+            renumbering = dict()
+            for i in range(self.N):
+                renumbering[bus_numbers[i]] = i+1
+                self.bus[i][0] = i+1
+            for i in range(len(self.gen)):
+                self.gen[i][0] = renumbering[self.gen[i][0]]
+            for i in range(len(self.branch)):
+                self.branch[i][0] = renumbering[self.branch[i][0]]
+                self.branch[i][1] = renumbering[self.branch[i][1]]
+            self.renumber = renumbering
+        else:
+            self.renumber = None
 
     def getDct(self, filename):
         "Load json dictionary from file"
@@ -124,10 +141,10 @@ class UsefulCase(Case):
             self.gen = [self.gen]
         for line in self.gen:
             bus = line[0] - 1
-            ans[bus, 2] = line[3]/self.mva
-            ans[bus, 3] = line[4]/self.mva
-            ans[bus, 0] = line[8]/self.mva
-            ans[bus, 1] = line[9]/self.mva
+            ans[bus, 2] = None if line[3] is None else line[3]/self.mva
+            ans[bus, 3] = None if line[4] is None else line[4]/self.mva
+            ans[bus, 0] = None if line[8] is None else line[8]/self.mva
+            ans[bus, 1] = None if line[9] is None else line[9]/self.mva
         return ans
     
     def getLoadData(self):
