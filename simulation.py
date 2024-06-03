@@ -5,7 +5,7 @@ from OPF_Tools.result import RunResult
 from OPF_Tools.chordalification import Relaxation, getChordalExtension
 
 
-def runOPF(case, relaxation_type='SDR', verb=False, solver=None):
+def runOPF(case, relaxation_type='SDR', verb=False, solver=None, perturb_loads=(0,0)):
     '''Find the solution to the OPF specified.
     The solver uses a sparse representation of the problem
 
@@ -20,6 +20,8 @@ def runOPF(case, relaxation_type='SDR', verb=False, solver=None):
     'STCR'             -> Strong Tight and Cheap relaxation
 
     verb invokes the verbose option in cvxpy
+    
+    perturb_loads is a tuple (std_dev, seed) that perturbates the loads with a normal distribution centered at 0 with a standard deviation proportional to the original value
 
     Returns:
         RunResult instance with the optimal values
@@ -43,6 +45,19 @@ def runOPF(case, relaxation_type='SDR', verb=False, solver=None):
     Sij = case.smax
     v_lim = case.vlim
     lines = case.getLines()
+    
+    if perturb_loads[0]:
+        n = len(Load_data)
+        np.random.seed(perturb_loads[1])
+        sum_active = np.sum(Load_data[:,0])
+        sum_reactive = np.sum(Load_data[:,1])
+        Load_data += np.random.normal(0, np.abs(perturb_loads[0]*Load_data), (n,2))
+        Load_data = np.clip(Load_data, 0, None)
+        sum_active_new = np.sum(Load_data[:,0])
+        sum_reactive_new = np.sum(Load_data[:,1])
+        diff_active = sum_active_new - sum_active
+        diff_reactive = sum_reactive_new - sum_reactive
+        print(f'A total of {diff_active:.2f} MW and {diff_reactive:.2f} MVar were added to the system')
 
     # Network graph
     Network = nx.Graph()
@@ -228,13 +243,12 @@ def runOPF(case, relaxation_type='SDR', verb=False, solver=None):
         if c1 > 0.0: # Bus has a generator installed
             Costs += c0+c1*pi_g[i]*baseMVA+c2*cp.square(pi_g[i]*baseMVA)
     
-    print('Setting up the problem')
     prob = cp.Problem(cp.Minimize(Costs),constraints)
     print('Solving the problem')
     try:
         if solver is not None:
             if solver == 'MOSEK':
-                import os
+                # import os
                 # prob.solve(warm_start = True, solver='MOSEK',mosek_params = {"MSK_IPAR_NUM_THREADS":os.cpu_count()},verbose=verb,ignore_dpp = True)
                 prob.solve(verbose=verb, solver=solver)
             else:
