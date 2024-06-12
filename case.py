@@ -193,7 +193,6 @@ class UsefulCase(Case):
         
     def get_renumbering(self):
         return self.renumber
-    
 
 def loadCase(filename):
     with open(filename) as file:
