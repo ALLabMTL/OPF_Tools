@@ -5,7 +5,7 @@ from OPF_Tools.result import RunResult
 from OPF_Tools.chordalification import Relaxation, getChordalExtension
 
 
-def runOPF(case, relaxation_type='SDR', verb=False, solver=None, perturb_loads=(0,0)):
+def runOPF(case, relaxation_type='SDR', verb=False, solver=None, perturb_loads=(0,0), merge_strategy = 'No Merge'):
     '''Find the solution to the OPF specified.
     The solver uses a sparse representation of the problem
 
@@ -23,6 +23,8 @@ def runOPF(case, relaxation_type='SDR', verb=False, solver=None, perturb_loads=(
     
     perturb_loads is a tuple (std_dev, seed) that perturbates the loads with a normal distribution centered at 0 with a standard deviation proportional to the original value
 
+    merge strategy is a string that defines the strategy used to merge the cliques in the clique tree / clique graph. It can be 'No Merge', 'ParentChild' (not implemented yet) or 'CliqueGraph'
+    
     Returns:
         RunResult instance with the optimal values
         -> RunResult.status is None if the solver does not converge
@@ -30,9 +32,9 @@ def runOPF(case, relaxation_type='SDR', verb=False, solver=None, perturb_loads=(
 
     try:
         relaxation = Relaxation[relaxation_type]
-    except KeyError:
-        print(f"'{relaxation_type}' is not a valid Relaxation")
-        return None
+    except KeyError as err:
+        msg = f"'{relaxation_type}' is not a valid Relaxation."
+        raise ValueError(msg) from err
     linking_constraints = 0
 
     # load data from case
@@ -64,22 +66,27 @@ def runOPF(case, relaxation_type='SDR', verb=False, solver=None, perturb_loads=(
     Network.add_nodes_from(range(n))
     Network.add_edges_from(lines)
     
-    print('Setting up the variables')
+    if verb:
+        print('Setting up the variables')
 
     #Voltage matrix
-    if relaxation in Relaxation.Non_Chordal_Relaxations:
+    if relaxation in Relaxation.W_Relaxations:
         W = cp.Variable((n,n), hermitian=True)
+        
+    if relaxation == Relaxation.SOCR:
+        Wij = {line: cp.Variable(complex=True) for line in lines}
+        Wii = {node: cp.Variable(nonneg=True) for node in range(n)}
     
     if relaxation in Relaxation.Chordal_Relaxations:
-        chordal_extension, ordering, cliques = getChordalExtension(Network,relaxation)
+        chordal_extension, ordering, cliques, clique_tree = getChordalExtension(Network, relaxation, merge_strategy)
         N_cliques = len(cliques)
         fill_in = chordal_extension.number_of_edges() - Network.number_of_edges()
         mean_size_of_cliques = np.mean([len(clique) for clique in cliques])
+        nb_of_semi_definite_coefficients = sum([len(clique)**2 for clique in cliques])
         
         W_K = {clique: cp.Variable((len(clique), len(clique)), hermitian=True) for clique in cliques}
         
         # Creating dictionaries that map the nodes and edges to their respective cliques
-        
         clique_sets = [set(clique) for clique in cliques]
         
         node_to_cliques = [[] for _ in range(n)]
@@ -99,7 +106,7 @@ def runOPF(case, relaxation_type='SDR', verb=False, solver=None, perturb_loads=(
                         break
                 if found:
                     break
-
+                
     # power transfer variables
     pij = cp.Variable((len(lines)))
     pji = cp.Variable((len(lines)))
@@ -111,8 +118,9 @@ def runOPF(case, relaxation_type='SDR', verb=False, solver=None, perturb_loads=(
     qi_g = cp.Variable((n))
 
     # Define constraints
-    constraints=[] 
-    print('Setting up voltage limits and power balance constraints')
+    constraints=[]
+    if verb:
+        print('Setting up voltage limits and power balance constraints')
     # Calculate the sum of all inbound power flows to each bus
     for i in range(n) :  
         psum = 0
@@ -132,32 +140,41 @@ def runOPF(case, relaxation_type='SDR', verb=False, solver=None, perturb_loads=(
         constraints += [qsum == qi_g[i]-Load_data[i,1]]
         
         # Voltage limits
-        if relaxation in Relaxation.Non_Chordal_Relaxations:
+        if relaxation in Relaxation.W_Relaxations:
             constraints+=[cp.real(W[i,i])>= (v_lim[i,1])**2, cp.real(W[i,i]) <= (v_lim[i,0])**2]
+            
+        if relaxation == Relaxation.SOCR:
+            constraints+=[Wii[i] >= (v_lim[i,1])**2, Wii[i] <= (v_lim[i,0])**2]
+            
         if relaxation in Relaxation.Chordal_Relaxations:
             clique = cliques[node_to_cliques[i][0]]
             pos = clique.index(i)
-            constraints += [v_lim[i,1]**2 <= cp.real(W_K[clique][pos,pos]), cp.real(W_K[clique][pos,pos]) <= v_lim[i,0]**2]
+            constraints += [cp.real(W_K[clique][pos,pos]) >= (v_lim[i,1])**2, cp.real(W_K[clique][pos,pos]) <= (v_lim[i,0])**2]
 
         # Constraints on active and reactive generation (min-max)
-        if Gen_data[i, 0] is not None:
+        if not np.isnan(Gen_data[i, 0]):
             constraints += [pi_g[i] <= Gen_data[i, 0]]
-        if Gen_data[i, 1] is not None:
+        if not np.isnan(Gen_data[i, 1]):
             constraints += [pi_g[i] >= Gen_data[i, 1]]
-        if Gen_data[i, 2] is not None:
+        if not np.isnan(Gen_data[i, 2]):
             constraints += [qi_g[i] <= Gen_data[i, 2]]
-        if Gen_data[i, 3] is not None:
+        if not np.isnan(Gen_data[i, 3]):
             constraints += [qi_g[i] >= Gen_data[i, 3]]
 
     # Power flow equations (sparse representation)
-    print('Setting up the power flow equations')
+    if verb:
+        print('Setting up the power flow equations')
     for line in range(len(lines)):
         i, j = lines[line]
         
         #Powerflow
-        if relaxation in Relaxation.Non_Chordal_Relaxations:
+        if relaxation in Relaxation.W_Relaxations:
             constraints+=[pij[line] + 1j*qij[line]==(W[i,i]-W[i,j])*np.conjugate(Y[i,j])] 
             constraints+=[pji[line] + 1j*qji[line]==(W[j,j]-W[j,i])*np.conjugate(Y[j,i])] 
+            
+        if relaxation == Relaxation.SOCR:
+            constraints+=[pij[line] + 1j*qij[line]==(Wii[i]-Wij[(i,j)])*np.conjugate(Y[i,j])]
+            constraints+=[pji[line] + 1j*qji[line]==(Wii[j]-cp.conj(Wij[(i,j)]))*np.conjugate(Y[j,i])]
         
         if relaxation in Relaxation.Chordal_Relaxations:
             clique = cliques[edge_to_clique[(i,j)]]
@@ -171,31 +188,18 @@ def runOPF(case, relaxation_type='SDR', verb=False, solver=None, perturb_loads=(
             constraints+=[cp.square(pij[line])+cp.square(qij[line])<=cp.square(Sij[i,j])]
             constraints+=[cp.square(pji[line])+cp.square(qji[line])<=cp.square(Sij[j,i])]
     
-    print('Setting up the relaxation')
+    if verb:
+        print('Setting up the relaxation')
     # SDR problem
     if relaxation == Relaxation.SDR:
         constraints += [W >> 0]
 
     # SOCR problem
     if relaxation == Relaxation.SOCR:
-        for line in range(len(lines)):
-            i, j = lines[line]
-            constraints+=[cp.norm(cp.hstack([2*W[i,j],(W[i,i]-W[j,j])])) <= cp.real(W[i,i]+W[j,j])]
-            constraints+=[cp.norm(cp.hstack([2*W[j,i],(W[j,j]-W[i,i])])) <= cp.real(W[j,j]+W[i,i])]
+        for i,j in lines:
+            constraints+=[cp.norm(cp.hstack([2*Wij[(i,j)],(Wii[i]-Wii[j])])) <= cp.real(Wii[i]+Wii[j])]
 
     if relaxation in Relaxation.Chordal_Relaxations:
-
-        # Computing the clique tree
-        from itertools import combinations
-        clique_graph = nx.Graph()
-        clique_graph.add_nodes_from(cliques, type="clique")
-        for edge in combinations(cliques, 2):
-            set_edge_0 = set(edge[0])
-            set_edge_1 = set(edge[1])
-            if not set_edge_0.isdisjoint(set_edge_1):
-                sepset = tuple(sorted(set_edge_0.intersection(set_edge_1)))
-                clique_graph.add_edge(edge[0], edge[1], weight=len(sepset), sepset=sepset)
-        clique_tree = nx.maximum_spanning_tree(clique_graph)
 
         # Adding the linking constraints from the clique tree
         for edge in clique_tree.edges(data=True):
@@ -205,9 +209,10 @@ def runOPF(case, relaxation_type='SDR', verb=False, solver=None, perturb_loads=(
             
             pos_sepset_clique_1 = [i for i in range(len(clique_1)) if clique_1[i] in sepset]
             pos_sepset_clique_2 = [i for i in range(len(clique_2)) if clique_2[i] in sepset]
-            
+
             constraints += [W_K[clique_1][np.ix_(pos_sepset_clique_1,pos_sepset_clique_1)] == W_K[clique_2][np.ix_(pos_sepset_clique_2,pos_sepset_clique_2)]]
             linking_constraints += len(sepset)**2
+            
         for clique in cliques:
             constraints += [W_K[clique] >> 0]
 
@@ -244,7 +249,8 @@ def runOPF(case, relaxation_type='SDR', verb=False, solver=None, perturb_loads=(
             Costs += c0+c1*pi_g[i]*baseMVA+c2*cp.square(pi_g[i]*baseMVA)
     
     prob = cp.Problem(cp.Minimize(Costs),constraints)
-    print('Solving the problem')
+    if verb:
+        print('Solving the problem')
     try:
         if solver is not None:
             if solver == 'MOSEK':
@@ -262,10 +268,25 @@ def runOPF(case, relaxation_type='SDR', verb=False, solver=None, perturb_loads=(
     ans = RunResult()
     if status == 'optimal':
         ans.set_p_q(pi_g*baseMVA, qi_g*baseMVA)
-        if relaxation in Relaxation.Non_Chordal_Relaxations:
+        if relaxation in Relaxation.W_Relaxations:
+            ans.set_W(W)
+        elif relaxation == Relaxation.SOCR:
+            W = np.zeros((n,n), dtype=complex)
+            for i in range(n):
+                W[i,i] = Wii[i].value
+            for i,j in lines:
+                W[i,j] = Wij[(i,j)].value
+                W[j,i] = cp.conj(Wij[(i,j)]).value
+            ans.set_W(W)
+        elif relaxation in Relaxation.Chordal_Relaxations:
+            W = np.zeros((n,n), dtype=complex)
+            for clique in cliques:
+                for i in range(len(clique)):
+                    for j in range(len(clique)):
+                        W[clique[i],clique[j]] = W_K[clique][i,j].value
             ans.set_W(W)
     if relaxation in Relaxation.Non_Chordal_Relaxations:
         ans.setAll(status, loss, Network, prob._solve_time, prob._compilation_time, relaxation)
     if relaxation in Relaxation.Chordal_Relaxations:
-        ans.setAll_chordal(status, loss, Network, chordal_extension, ordering, prob._solve_time, prob._compilation_time, relaxation, N_cliques, fill_in, linking_constraints, mean_size_of_cliques)
+        ans.setAll_chordal(status, loss, Network, chordal_extension, ordering, prob._solve_time, prob._compilation_time, relaxation, N_cliques, fill_in, linking_constraints, mean_size_of_cliques, nb_of_semi_definite_coefficients, nb_of_semi_definite_coefficients - linking_constraints)
     return ans

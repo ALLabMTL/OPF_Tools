@@ -20,6 +20,8 @@ class RunResult:
         self.fill_in = 0
         self.linking_constraints = 0
         self.mean_size_of_cliques = 0
+        self.nb_of_sdp_coeffs = 0
+        self.nb_of_independent_sdp_coeffs = 0
 
     def setAll(self, status, loss, network, solve_time, compilation_time, relaxation):
         '''Set all parameters including loss'''
@@ -36,18 +38,18 @@ class RunResult:
 
     def set_p_q(self, p, q):
         '''Set parameters without loss'''
-        self.p = p.value
-        self.q = q.value
+        self.p = p
+        self.q = q
     
     def set_W(self, W):
         '''Set parameters without loss'''
-        self.W = W.value
+        self.W = W
 
     def setLoss(self, loss):
         '''Set optimal losses'''
         self.loss = loss
 
-    def setAll_chordal(self, status, loss, network, chordal_extension, ordering, solve_time, compilation_time, relaxation, number_of_cliques, fill_in, linking_constraints, mean_size_of_cliques):
+    def setAll_chordal(self, status, loss, network, chordal_extension, ordering, solve_time, compilation_time, relaxation, number_of_cliques, fill_in, linking_constraints, mean_size_of_cliques, nb_of_sdp_coeffs, nb_of_independent_sdp_coeffs):
         '''Set all parameters including loss'''
         self.status = status
         self.loss = loss
@@ -61,6 +63,8 @@ class RunResult:
         self.fill_in = fill_in
         self.linking_constraints = linking_constraints
         self.mean_size_of_cliques = mean_size_of_cliques
+        self.nb_of_sdp_coeffs = nb_of_sdp_coeffs
+        self.nb_of_independent_sdp_coeffs = nb_of_independent_sdp_coeffs
 
     def is_radial(self):
         return nx.is_tree(self.network)

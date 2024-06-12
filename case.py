@@ -139,12 +139,12 @@ class UsefulCase(Case):
         ans = np.zeros((self.N, 4))
         if not isinstance(self.gen[0], list):
             self.gen = [self.gen]
-        for line in self.gen:
-            bus = line[0] - 1
-            ans[bus, 2] = None if line[3] is None else line[3]/self.mva
-            ans[bus, 3] = None if line[4] is None else line[4]/self.mva
-            ans[bus, 0] = None if line[8] is None else line[8]/self.mva
-            ans[bus, 1] = None if line[9] is None else line[9]/self.mva
+        for bus_gen_data in self.gen:
+            bus = bus_gen_data[0] - 1
+            ans[bus, 2] = np.nan if bus_gen_data[3] is None else bus_gen_data[3]/self.mva
+            ans[bus, 3] = np.nan if bus_gen_data[4] is None else bus_gen_data[4]/self.mva
+            ans[bus, 0] = np.nan if bus_gen_data[8] is None else bus_gen_data[8]/self.mva
+            ans[bus, 1] = np.nan if bus_gen_data[9] is None else bus_gen_data[9]/self.mva
         return ans
     
     def getLoadData(self):
