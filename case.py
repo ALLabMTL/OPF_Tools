@@ -141,10 +141,10 @@ class UsefulCase(Case):
             self.gen = [self.gen]
         for bus_gen_data in self.gen:
             bus = bus_gen_data[0] - 1
-            ans[bus, 2] = None if bus_gen_data[3] is None else bus_gen_data[3]/self.mva
-            ans[bus, 3] = None if bus_gen_data[4] is None else bus_gen_data[4]/self.mva
-            ans[bus, 0] = None if bus_gen_data[8] is None else bus_gen_data[8]/self.mva
-            ans[bus, 1] = None if bus_gen_data[9] is None else bus_gen_data[9]/self.mva
+            ans[bus, 2] = np.nan if bus_gen_data[3] is None else bus_gen_data[3]/self.mva
+            ans[bus, 3] = np.nan if bus_gen_data[4] is None else bus_gen_data[4]/self.mva
+            ans[bus, 0] = np.nan if bus_gen_data[8] is None else bus_gen_data[8]/self.mva
+            ans[bus, 1] = np.nan if bus_gen_data[9] is None else bus_gen_data[9]/self.mva
         return ans
     
     def getLoadData(self):
