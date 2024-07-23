@@ -9,6 +9,10 @@ class RunResult:
         self.W = None
         self.p = None
         self.q = None
+        self.pij = None
+        self.qij = None
+        self.pji = None
+        self.qji = None
         self.loss = 0
         self.network = None
         self.chordal_extension = None
@@ -36,10 +40,14 @@ class RunResult:
         '''Set status of optimization'''
         self.status = status
 
-    def set_p_q(self, p, q):
+    def set_p_q(self, p, q, pij, qij, pji, qji):
         '''Set parameters without loss'''
         self.p = p
         self.q = q
+        self.pij = pij
+        self.qij = qij
+        self.pji = pji
+        self.qji = qji
     
     def set_W(self, W):
         '''Set parameters without loss'''

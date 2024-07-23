@@ -267,7 +267,7 @@ def runOPF(case, relaxation_type='SDR', verb=False, solver=None, perturb_loads=(
     status = prob.status
     ans = RunResult()
     if status == 'optimal':
-        ans.set_p_q(pi_g*baseMVA, qi_g*baseMVA)
+        ans.set_p_q(pi_g*baseMVA, qi_g*baseMVA, pij.value*baseMVA, qij.value*baseMVA, pji.value*baseMVA, qji.value*baseMVA)
         if relaxation in Relaxation.W_Relaxations:
             ans.set_W(W)
         elif relaxation == Relaxation.SOCR:
